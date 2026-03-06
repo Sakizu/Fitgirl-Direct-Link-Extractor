@@ -1,4 +1,4 @@
-# Fitgirl-Easy-Downloader
+# Fitgirl-Direct-Link-Extractor
 This Tool Helps To Download Multiple Files Easily From fitgirl-repacks.site Through fuckingfast.co
 
 ## Prerequisites
