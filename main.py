@@ -1,120 +1,159 @@
-import os, re, requests
+import requests
+import os
+import sys
+import re
+import pyperclip
 from bs4 import BeautifulSoup
-from tqdm import tqdm
 from datetime import datetime
 from colorama import Fore, Style
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class console:
     def __init__(self) -> None:
-        self.colors = {"green": Fore.GREEN, "red": Fore.RED, "yellow": Fore.YELLOW, "blue": Fore.BLUE, "magenta": Fore.MAGENTA, "cyan": Fore.CYAN, "white": Fore.WHITE, "black": Fore.BLACK, "reset": Style.RESET_ALL, "lightblack": Fore.LIGHTBLACK_EX, "lightred": Fore.LIGHTRED_EX, "lightgreen": Fore.LIGHTGREEN_EX, "lightyellow": Fore.LIGHTYELLOW_EX, "lightblue": Fore.LIGHTBLUE_EX, "lightmagenta": Fore.LIGHTMAGENTA_EX, "lightcyan": Fore.LIGHTCYAN_EX, "lightwhite": Fore.LIGHTWHITE_EX}
+        self.colors = {
+            "green": Fore.GREEN,
+            "red": Fore.RED,
+            "yellow": Fore.YELLOW,
+            "blue": Fore.BLUE,
+            "magenta": Fore.MAGENTA,
+            "cyan": Fore.CYAN,
+            "white": Fore.WHITE,
+            "black": Fore.BLACK,
+            "reset": Style.RESET_ALL,
+            "lightblack": Fore.LIGHTBLACK_EX,
+            "lightred": Fore.LIGHTRED_EX,
+            "lightgreen": Fore.LIGHTGREEN_EX,
+            "lightyellow": Fore.LIGHTYELLOW_EX,
+            "lightblue": Fore.LIGHTBLUE_EX,
+            "lightmagenta": Fore.LIGHTMAGENTA_EX,
+            "lightcyan": Fore.LIGHTCYAN_EX,
+            "lightwhite": Fore.LIGHTWHITE_EX,
+        }
 
     def clear(self):
         os.system("cls" if os.name == "nt" else "clear")
 
     def timestamp(self):
         return datetime.now().strftime("%H:%M:%S")
-    
+
     def success(self, message, obj):
-        print(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightgreen']}SUCC {self.colors['lightblack']}• {self.colors['white']}{message} : {self.colors['lightgreen']}{obj}{self.colors['white']} {self.colors['reset']}")
+        print(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightgreen']}SUCC {self.colors['lightblack']}• {self.colors['white']}{message} : {self.colors['lightgreen']}{obj}{self.colors['reset']}")
 
     def error(self, message, obj):
-        print(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightred']}ERRR {self.colors['lightblack']}• {self.colors['white']}{message} : {self.colors['lightred']}{obj}{self.colors['white']} {self.colors['reset']}")
+        print(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightred']}ERRR {self.colors['lightblack']}• {self.colors['white']}{message} : {self.colors['lightred']}{obj}{self.colors['reset']}")
 
     def done(self, message, obj):
-        print(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightmagenta']}DONE {self.colors['lightblack']}• {self.colors['white']}{message} : {self.colors['lightmagenta']}{obj}{self.colors['white']} {self.colors['reset']}")
+        print(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightmagenta']}DONE {self.colors['lightblack']}• {self.colors['white']}{message} : {self.colors['lightmagenta']}{obj}{self.colors['reset']}")
 
     def warning(self, message, obj):
-        print(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightyellow']}WARN {self.colors['lightblack']}• {self.colors['white']}{message} : {self.colors['lightyellow']}{obj}{self.colors['white']} {self.colors['reset']}")
+        print(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightyellow']}WARN {self.colors['lightblack']}• {self.colors['white']}{message} : {self.colors['lightyellow']}{obj}{self.colors['reset']}")
 
     def info(self, message, obj):
-        print(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightblue']}INFO {self.colors['lightblack']}• {self.colors['white']}{message} : {self.colors['lightblue']}{obj}{self.colors['white']} {self.colors['reset']}")
-
-    def custom(self, message, obj, color):
-        print(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors[color.upper()]}{color.upper()} {self.colors['lightblack']}• {self.colors['white']}{message} : {self.colors[color.upper()]}{obj}{self.colors['white']} {self.colors['reset']}")
+        print(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightblue']}INFO {self.colors['lightblack']}• {self.colors['white']}{message} : {self.colors['lightblue']}{obj}{self.colors['reset']}")
 
     def input(self, message):
-        return input(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightcyan']}INPUT   {self.colors['lightblack']}• {self.colors['white']}{message}{self.colors['reset']}")
+        return input(f"{self.colors['lightblack']}{self.timestamp()} » {self.colors['lightcyan']}INPUT • {self.colors['white']}{message}{self.colors['reset']}")
 
-downloads_folder = "downloads"
-os.makedirs(downloads_folder, exist_ok=True)
+
 log = console()
 log.clear()
 
-headers = {
-    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-    'accept-language': 'en-US,en;q=0.5',
-    'referer': 'https://fitgirl-repacks.site/',
-    'sec-ch-ua': '"Brave";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"Windows"',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-}
+url = log.input("Enter Fitgirl Game Link : ")
 
-def download_file(download_url, output_path):
-    response = requests.get(download_url, stream=True)
-    if response.status_code == 200:
-        total_size = int(response.headers.get('content-length', 0))
-        block_size = 8192
+try:
+    r = requests.get(url, timeout=30)
+except Exception as e:
+    log.error("Request Failed", e)
+    sys.exit()
 
-        with open(output_path, 'wb') as f, tqdm(
-            total=total_size,
-            unit='B',
-            unit_scale=True,
-            unit_divisor=1024,
-        ) as bar:
-            for data in response.iter_content(block_size):
-                f.write(data)
-                bar.set_description(f"{log.colors['lightblack']}{log.timestamp()} » {log.colors['lightblue']}INFO {log.colors['lightblack']}• {log.colors['white']}Downloading -> {output_path[:15]}...{output_path[55:]} {log.colors['reset']}")
-                bar.update(len(data))
+soup = BeautifulSoup(r.text, "html.parser")
 
-        log.success(f"Successfully Downloaded File", F"{output_path[:35]}...{output_path[55:]}")
-    else:
-        log.error(f"Failed To Download File", response.status_code)
+text_span = soup.find(
+    "span",
+    string=lambda s: s and "REALLY Fucking Fast" in s
+)
 
-def remove_link(processed_link, input_file='input.txt'):
-    with open(input_file, 'r') as file:
-        links = file.readlines()
-        
-    with open(input_file, 'w') as file:
-        for link in links:
-            if link.strip() != processed_link:
-                file.write(link)
+if not text_span:
+    log.error("Text Not Found", "REALLY Fucking Fast")
+    sys.exit()
 
-with open('input.txt', 'r') as file:
-    links = [line.strip() for line in file if line.strip()]
+spoiler = text_span.find_next(
+    "div",
+    class_="su-spoiler"
+)
 
-for link in links:
-    log.info(f"Started Processing", f"{link[:30]}...{link[60:]}")
-    response = requests.get(link, headers=headers)
+if not spoiler:
+    log.error("Spoiler Container Not Found", "su-spoiler")
+    sys.exit()
 
-    if response.status_code != 200:
-        log.error(f"Failed To Fetch Page", response.status_code)
-        continue
+links = [
+    a["href"]
+    for a in spoiler.find_all("a", href=True)
+    if a["href"].startswith("https://fuckingfast.co/")
+]
 
-    soup = BeautifulSoup(response.text, 'html.parser')
-    meta_title = soup.find('meta', attrs={'name': 'title'})
-    file_name = meta_title['content'] if meta_title else "default_file_name"
-    script_tags = soup.find_all('script')
-    download_function = None
-    for script in script_tags:
-        if 'function download' in script.text:
-            download_function = script.text
-            break
+if not links:
+    log.error("No Matching URLs Found", "Retry")
+    sys.exit()
 
-    if download_function:
-        match = re.search(r'window\.open\(["\'](https?://[^\s"\'\)]+)', download_function)
+log.success("Found FuckingFast Links", len(links))
+
+
+def get_direct_link(url):
+    try:
+        r = requests.get(url, timeout=30)
+
+        match = re.search(
+            r'window\.open\("(https://fuckingfast\.co/dl/[^"]+)"',
+            r.text
+        )
+
         if match:
-            download_url = match.group(1)
-            log.info(f"Found Download Url", f"{download_url[:70]}...")
-            output_path = os.path.join(downloads_folder, file_name)
-            try:
-                download_file(download_url, output_path)
-                remove_link(link)
-            except Exception as e:
-                log.error(f"Failed To Download File", str(e))
+            return match.group(1)
+
+    except Exception:
+        return None
+
+    return None
+
+
+direct_links = []
+total = len(links)
+
+log.info("Resolving Direct Links", total)
+
+with ThreadPoolExecutor(max_workers=3) as executor:
+    futures = {executor.submit(get_direct_link, link): link for link in links}
+
+    for i, future in enumerate(as_completed(futures), 1):
+
+        result = future.result()
+
+        if result:
+            direct_links.append(result)
+            log.success("Direct Link", result)
         else:
-            log.error("No Download Url Found", response.status_code)
-    else:
-        log.error("Download Function Not Found", response.status_code)
-        
+            log.warning("Failed", futures[future])
+
+        log.info("Progress", f"{i}/{total}")
+
+
+if direct_links:
+
+    output = "\n".join(direct_links)
+
+    print("\n🔗 Direct Download Links:\n")
+    print(output)
+
+    with open("direct.txt", "w", encoding="utf-8") as f:
+        f.write(output)
+
+    log.success("Saved To File", "direct.txt")
+
+    pyperclip.copy(output)
+
+    log.done("Links Copied To Clipboard", len(direct_links))
+
+else:
+    log.error("No Direct Links Extracted", "Retry")
